@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WOLFBOT — Pair Sites</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@700;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #010301;
+      color: #00ff41;
+      font-family: 'Share Tech Mono', monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      overflow: hidden;
+    }
+
+    canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* scanlines */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,255,65,0.012) 2px,
+        rgba(0,255,65,0.012) 4px
+      );
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .content {
+      position: relative;
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+    }
+
+    .logo {
+      font-family: 'Orbitron', monospace;
+      font-size: 2rem;
+      font-weight: 900;
+      letter-spacing: 0.15em;
+      color: #00ff41;
+      text-shadow:
+        0 0 8px rgba(0,255,65,0.4),
+        0 0 18px rgba(0,255,65,0.15);
+      margin-bottom: 4px;
+      text-align: center;
+    }
+
+    .logo span {
+      color: #fff;
+      text-shadow:
+        0 0 8px rgba(255,255,255,0.25),
+        0 0 16px rgba(0,255,65,0.1);
+    }
+
+    .tagline {
+      font-size: 0.7rem;
+      color: #1e5e1e;
+      letter-spacing: 0.25em;
+      margin-bottom: 44px;
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+    .grid {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .card {
+      background: rgba(2, 8, 2, 0.85);
+      border: 1px solid #0c230c;
+      border-radius: 10px;
+      padding: 20px 22px 16px;
+      cursor: pointer;
+      transition: all 0.22s ease;
+      text-decoration: none;
+      display: block;
+      backdrop-filter: blur(4px);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 60%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(0,255,65,0.04), transparent);
+      transition: left 0.5s ease;
+    }
+
+    .card:hover::before { left: 150%; }
+
+    .card::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #00ff41, transparent);
+      opacity: 0;
+      transition: opacity 0.22s;
+    }
+
+    .card:hover {
+      border-color: #00ff41;
+      box-shadow:
+        0 0 20px rgba(0,255,65,0.12),
+        0 0 60px rgba(0,255,65,0.05),
+        inset 0 0 20px rgba(0,255,65,0.03);
+      transform: translateY(-2px);
+    }
+
+    .card:hover::after { opacity: 1; }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .pair-label {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.78rem;
+      font-weight: 900;
+      color: #000;
+      background: #00ff41;
+      padding: 3px 10px;
+      border-radius: 3px;
+      letter-spacing: 0.1em;
+      box-shadow: 0 0 10px rgba(0,255,65,0.5);
+    }
+
+    .arrow {
+      color: #144a14;
+      font-size: 1rem;
+      transition: all 0.22s;
+    }
+
+    .card:hover .arrow {
+      color: #00ff41;
+      text-shadow: 0 0 8px #00ff41;
+      transform: translateX(4px);
+    }
+
+    .site-url {
+      font-size: 0.88rem;
+      color: #00ff41;
+      word-break: break-all;
+      line-height: 1.4;
+      text-shadow: 0 0 8px rgba(0,255,65,0.3);
+    }
+
+    .site-full {
+      font-size: 0.67rem;
+      color: #1c4a1c;
+      margin-top: 5px;
+    }
+
+    .divider {
+      height: 1px;
+      background: #0b200b;
+      margin: 12px 0;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 0.67rem;
+      color: #1c5a1c;
+      letter-spacing: 0.04em;
+    }
+
+    .dot {
+      width: 5px; height: 5px;
+      background: #00ff41;
+      border-radius: 50%;
+      box-shadow: 0 0 7px #00ff41;
+      flex-shrink: 0;
+      animation: blink 1.8s infinite;
+    }
+
+    @keyframes blink {
+      0%,100% { opacity: 1; box-shadow: 0 0 7px #00ff41; }
+      50% { opacity: 0.3; box-shadow: none; }
+    }
+
+    .footer {
+      margin-top: 34px;
+      font-size: 0.6rem;
+      color: #0f300f;
+      letter-spacing: 0.1em;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="bg"></canvas>
+
+<div class="content">
+  <div class="logo">WOLF<span>BOT</span></div>
+  <div class="tagline">⚡ pair sites — select to connect</div>
+
+  <div class="grid">
+
+    <a class="card" href="https://pair.xwolf.space" target="_blank">
+      <div class="card-header">
+        <span class="pair-label">PAIR SITE 1</span>
+        <span class="arrow">→</span>
+      </div>
+      <div class="site-url">pair.xwolf.space</div>
+      <div class="site-full">https://pair.xwolf.space</div>
+      <div class="divider"></div>
+      <div class="status"><span class="dot"></span> ONLINE · CUSTOM DOMAIN</div>
+    </a>
+
+    <a class="card" href="https://pairwolf.onrender.com" target="_blank">
+      <div class="card-header">
+        <span class="pair-label">PAIR SITE 2</span>
+        <span class="arrow">→</span>
+      </div>
+      <div class="site-url">pairwolf.onrender.com</div>
+      <div class="site-full">https://pairwolf.onrender.com</div>
+      <div class="divider"></div>
+      <div class="status"><span class="dot"></span> ONLINE · RENDER CLOUD</div>
+    </a>
+
+    <a class="card" href="https://pairwolf-usln.onrender.com" target="_blank">
+      <div class="card-header">
+        <span class="pair-label">PAIR SITE 3</span>
+        <span class="arrow">→</span>
+      </div>
+      <div class="site-url">pairwolf-usln.onrender.com</div>
+      <div class="site-full">https://pairwolf-usln.onrender.com</div>
+      <div class="divider"></div>
+      <div class="status"><span class="dot"></span> ONLINE · RENDER CLOUD</div>
+    </a>
+
+  </div>
+
+  <div class="footer"><span style="color:#00ff41">WOLF</span><span style="color:#fff">BOT</span> · BY <span style="color:#00ff41">WOLF</span><span style="color:#fff">TECH</span> · ALL CONNECTIONS SSL SECURED</div>
+</div>
+
+<script>
+  const canvas = document.getElementById('bg');
+  const ctx = canvas.getContext('2d');
+
+  let W, H, particles;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+
+  function randomBetween(a, b) { return a + Math.random() * (b - a); }
+
+  function createParticle() {
+    const radius = randomBetween(0.4, 1.6);
+    return {
+      x: randomBetween(0, W),
+      y: randomBetween(0, H),
+      radius,
+      // random velocity - slow drift
+      vx: randomBetween(-0.35, 0.35),
+      vy: randomBetween(-0.35, 0.35),
+      // glow intensity oscillates
+      glowPhase: randomBetween(0, Math.PI * 2),
+      glowSpeed: randomBetween(0.01, 0.04),
+      // opacity
+      alpha: randomBetween(0.4, 1.0),
+    };
+  }
+
+  function init() {
+    resize();
+    const count = Math.floor((W * H) / 9000);
+    particles = Array.from({ length: count }, createParticle);
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    for (const p of particles) {
+      // oscillate glow
+      p.glowPhase += p.glowSpeed;
+      const glow = 0.5 + 0.5 * Math.sin(p.glowPhase);
+      const alpha = p.alpha * (0.5 + 0.5 * glow);
+      const blurSize = p.radius * (2 + 3 * glow);
+
+      // outer soft glow
+      const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, blurSize * 3);
+      grad.addColorStop(0, `rgba(0,255,65,${alpha * 0.9})`);
+      grad.addColorStop(0.3, `rgba(0,255,65,${alpha * 0.3})`);
+      grad.addColorStop(1, `rgba(0,255,65,0)`);
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, blurSize * 3, 0, Math.PI * 2);
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      // solid bright core
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(0,255,65,${alpha})`;
+      ctx.fill();
+
+      // move
+      p.x += p.vx;
+      p.y += p.vy;
+
+      // slightly vary direction for organic feel
+      p.vx += randomBetween(-0.008, 0.008);
+      p.vy += randomBetween(-0.008, 0.008);
+
+      // clamp speed
+      const speed = Math.hypot(p.vx, p.vy);
+      if (speed > 0.5) { p.vx *= 0.95; p.vy *= 0.95; }
+
+      // wrap edges
+      if (p.x < -10) p.x = W + 10;
+      if (p.x > W + 10) p.x = -10;
+      if (p.y < -10) p.y = H + 10;
+      if (p.y > H + 10) p.y = -10;
+    }
+
+    requestAnimationFrame(draw);
+  }
+
+  window.addEventListener('resize', () => { resize(); });
+  init();
+  draw();
+</script>
+
+</body>
+</html>
